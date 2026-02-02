@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, ROLES } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
+import BoardGuard from './components/BoardGuard';
 
 // Lazy load modules
 const Dashboard = lazy(() => import('./modules/Dashboard'));
@@ -14,7 +15,7 @@ const ProjectManagement = lazy(() => import('./modules/ProjectManagement'));
 const Login = lazy(() => import('./modules/Login'));
 const Signup = lazy(() => import('./modules/Signup'));
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+const ProtectedRoute = ({ children, allowedRoles = [], requiresBoard = null }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -31,11 +32,16 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Check role permissions
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    // Non-founders trying to access unauthorized routes get redirected to their default board
+    if (user.role !== ROLES.ADMIN && user.defaultBoard) {
+      return <Navigate to={user.defaultBoard} replace />;
+    }
     return <Navigate to="/" replace />;
   }
 
-  return children;
+  return <BoardGuard>{children}</BoardGuard>;
 };
 
 const Layout = ({ children }) => {
@@ -64,7 +70,7 @@ function AppRoutes() {
       <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Suspense fallback={null}><Signup /></Suspense>} />
 
       <Route path="/" element={
-        <ProtectedRoute>
+        <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
           <Dashboard />
         </ProtectedRoute>
       } />

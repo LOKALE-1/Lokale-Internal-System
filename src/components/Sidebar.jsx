@@ -18,7 +18,7 @@ import { useAuth, ROLES } from '../context/AuthContext';
 import GlobalReportModal from './GlobalReportModal';
 
 const Sidebar = () => {
-    const { user, switchRole, logout } = useAuth();
+    const { user, activeBoard, switchBoard, getAccessibleBoards, logout } = useAuth();
     const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
 
     const menuItems = [
@@ -68,7 +68,11 @@ const Sidebar = () => {
 
     if (!user) return null;
 
-    const filteredItems = menuItems.filter(item => item.roles.includes(user.role));
+    // Filter menu items based on user role
+    // Non-founders only see items for their role, Founders see all
+    const filteredItems = user.role === ROLES.ADMIN
+        ? menuItems.filter(item => item.roles.includes(ROLES.ADMIN))
+        : menuItems.filter(item => item.roles.includes(user.role) && item.path !== '/');
 
     return (
         <aside className="sidebar glass" style={{
@@ -152,24 +156,37 @@ const Sidebar = () => {
                     </button>
 
                     {user.role === ROLES.ADMIN && (
-                        <select
-                            value={user.role}
-                            onChange={(e) => switchRole(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                background: 'var(--bg-tertiary)',
-                                color: 'var(--text-primary)',
-                                border: '1px solid var(--border-subtle)',
-                                borderRadius: 'var(--radius-sm)',
-                                fontSize: '0.75rem',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            {Object.values(ROLES).map(role => (
-                                <option key={role} value={role}>{role}</option>
-                            ))}
-                        </select>
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <label style={{
+                                display: 'block',
+                                fontSize: '0.65rem',
+                                fontWeight: '700',
+                                color: 'var(--text-muted)',
+                                marginBottom: '0.5rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}>
+                                View Board
+                            </label>
+                            <select
+                                value={activeBoard}
+                                onChange={(e) => switchBoard(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {getAccessibleBoards().map(board => (
+                                    <option key={board.path} value={board.path}>{board.label}</option>
+                                ))}
+                            </select>
+                        </div>
                     )}
 
                     <button
