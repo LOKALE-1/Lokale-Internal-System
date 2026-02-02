@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+    
+    function isAdmin() {
+      return hasRole('Founder / Ops Manager');
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if request.auth.uid == userId || isAdmin();
+    }
+
+    // Projects
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Tasks
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Growth Campaigns
+    match /campaigns/{campaignId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || hasRole('Marketing');
+    }
+
+    // Brand Onboarding
+    match /onboarding/{brandId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || hasRole('Partnerships / Growth');
+    }
+
+    // Partnerships
+    match /partnerships/{partnerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || hasRole('Partnerships / Growth');
+    }
+
+    // IT Board
+    match /it_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || hasRole('IT / Product');
+    }
+  }
+}
